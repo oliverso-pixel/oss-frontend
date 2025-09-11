@@ -4,62 +4,89 @@
 import { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { fetchUserProfile, sendFriendRequest, removeFriend } from '@/store/socialSlice'; // 導入 removeFriend
+import { fetchUserProfile, sendFriendRequest, removeFriend, followUser, unfollowUser, blockUser, unblockUser, fetchSocialStats } from '@/store/socialSlice';
 import { Button } from '@/components/ui/Button';
-import { User, Calendar, UserPlus, ArrowLeft, UserX } from 'lucide-react'; // 導入 UserX
+import { User, Calendar, UserPlus, ArrowLeft, UserX, Heart, MoreHorizontal, ShieldOff, UserCheck } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/DropdownMenu';
 import { format } from 'date-fns';
+import Link from 'next/link';
 
 export default function UserProfilePage() {
   const params = useParams();
   const router = useRouter();
   const userId = Number(params.userId);
   const dispatch = useAppDispatch();
-  const { userProfile, status } = useAppSelector((state) => state.social);
+  const { userProfile, stats, status } = useAppSelector((state) => state.social);
   const { user: currentUser } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
     if (userId) {
       dispatch(fetchUserProfile(userId));
+      dispatch(fetchSocialStats());
     }
   }, [userId, dispatch]);
 
   const handleAddFriend = () => dispatch(sendFriendRequest(userId));
-
   const handleRemoveFriend = () => {
     if (window.confirm(`您確定要移除好友 ${userProfile.data?.display_name || userProfile.data?.username} 嗎？`)) {
       dispatch(removeFriend(userId));
     }
   };
+  const handleFollow = () => dispatch(followUser(userId));
+  const handleUnfollow = () => dispatch(unfollowUser(userId));
+  const handleBlock = () => {
+    if (window.confirm(`您確定要封鎖 ${userProfile.data?.display_name || userProfile.data?.username} 嗎？封鎖後將無法看到對方的任何動態。`)) {
+      dispatch(blockUser(userId));
+    }
+  };
+  const handleUnblock = () => dispatch(unblockUser(userId));
 
-
-  if (status === 'loading' && !userProfile.data) {
-    return <div className="text-center p-10">正在載入個人資料...</div>;
-  }
-
-  if (status === 'failed' || !userProfile.data) {
-    return <div className="text-center p-10">無法載入此用戶資料。</div>;
-  }
+  if (status === 'loading' && !userProfile.data) { return <div className="text-center p-10">正在載入個人資料...</div>; }
+  if (status === 'failed' || !userProfile.data) { return <div className="text-center p-10">無法載入此用戶資料。</div>; }
 
   const { data: profile, relationship } = userProfile;
   const isSelf = currentUser?.id === profile.id;
 
-  const renderFriendButton = () => {
+  const renderActionButtons = () => {
     if (!relationship) return null;
 
-    if (relationship.is_friend) {
-      return (
-        <Button variant="destructive" onClick={handleRemoveFriend}>
-          <UserX className="mr-2 h-4 w-4" /> 移除好友
-        </Button>
-      );
+    // 如果被對方封鎖，不顯示任何按鈕
+    if (relationship.is_blocked_by) {
+      return <p className="text-sm text-muted-foreground">您無法與此用戶互動。</p>;
     }
-    if (relationship.has_pending_request) {
-      return <Button variant="secondary" disabled>好友請求已發送</Button>;
+    // 如果已封鎖對方
+    if (relationship.is_blocked) {
+      return <Button variant="outline" onClick={handleUnblock}><UserCheck className="mr-2 h-4 w-4" /> 解除封鎖</Button>;
     }
+
     return (
-      <Button onClick={handleAddFriend}>
-        <UserPlus className="mr-2 h-4 w-4" /> 加為好友
-      </Button>
+      <div className="flex gap-2 mt-2 sm:mt-0">
+        {relationship.is_friend ? (
+          <Button variant="secondary" onClick={handleRemoveFriend}><UserX className="mr-2 h-4 w-4" /> 已是好友</Button>
+        ) : relationship.has_pending_request ? (
+          <Button variant="secondary" disabled>好友請求已發送</Button>
+        ) : (
+          <Button onClick={handleAddFriend}><UserPlus className="mr-2 h-4 w-4" /> 加為好友</Button>
+        )}
+
+        {relationship.is_following ? (
+          <Button variant="outline" onClick={handleUnfollow}>已關注</Button>
+        ) : (
+          <Button variant="secondary" onClick={handleFollow}><Heart className="mr-2 h-4 w-4" /> 關注</Button>
+        )}
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={handleBlock} className="text-destructive focus:text-destructive">
+              <ShieldOff className="mr-2 h-4 w-4" />
+              <span>封鎖用戶</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     );
   };
 
@@ -83,11 +110,17 @@ export default function UserProfilePage() {
                 <h1 className="text-3xl font-bold">{profile.display_name || profile.username}</h1>
                 <p className="text-muted-foreground">@{profile.username}</p>
               </div>
-              {!isSelf && (
-                <div className="flex gap-2 mt-2 sm:mt-0">
-                  {renderFriendButton()}
-                </div>
-              )}
+              {!isSelf && renderActionButtons()}
+            </div>
+            <div className="flex items-center gap-6 mt-4 text-sm text-foreground">
+              <Link href="/following" className="hover:underline">
+                <span className="font-bold">{stats?.total_following || 0}</span>
+                <span className="ml-1 text-muted-foreground">正在關注</span>
+              </Link>
+              <Link href="/followers" className="hover:underline">
+                <span className="font-bold">{stats?.total_followers || 0}</span>
+                <span className="ml-1 text-muted-foreground">關注者</span>
+              </Link>
             </div>
             <p className="mt-4 text-sm text-foreground/80">{profile.bio || '這位用戶很神秘，什麼都沒留下。'}</p>
             <div className="flex items-center gap-4 mt-4 text-sm text-muted-foreground">

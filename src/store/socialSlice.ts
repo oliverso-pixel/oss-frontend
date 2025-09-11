@@ -1,23 +1,18 @@
 // src/store/socialSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction, AnyAction } from '@reduxjs/toolkit';
 import apiClient from '@/lib/apiClient';
-import { UserPublicProfile, RelationshipStatus, FriendRequest } from '@/types';
+import { UserPublicProfile, RelationshipStatus, FriendRequest, BlockedUser, SocialStats } from '@/types';
 
-// --- 開始：新增類型防護 ---
-// 這個函式是一個類型防護，它向 TypeScript 證明
-// 任何匹配此條件的 action 都會有一個 payload 屬性。
-interface RejectedAction extends AnyAction {
-  payload: unknown;
-}
-
-function isRejectedAction(action: AnyAction): action is RejectedAction {
-  return action.type.endsWith('/rejected');
-}
-// --- 結束：新增類型防護 ---
+interface RejectedAction extends AnyAction { payload: unknown; }
+function isRejectedAction(action: AnyAction): action is RejectedAction { return action.type.endsWith('/rejected'); }
 
 interface SocialState {
   friends: UserPublicProfile[];
   friendRequests: FriendRequest[];
+  followers: UserPublicProfile[];
+  following: UserPublicProfile[];
+  blockedUsers: BlockedUser[];
+  stats: SocialStats | null;
   searchResults: UserPublicProfile[];
   userProfile: {
     data: UserPublicProfile | null;
@@ -30,6 +25,10 @@ interface SocialState {
 const initialState: SocialState = {
   friends: [],
   friendRequests: [],
+  followers: [],
+  following: [],
+  blockedUsers: [],
+  stats: null,
   searchResults: [],
   userProfile: {
     data: null,
@@ -39,7 +38,7 @@ const initialState: SocialState = {
   error: null,
 };
 
-// --- Thunks ---
+// --- Thunks (好友相關) ---
 export const fetchFriends = createAsyncThunk('social/fetchFriends', async (_, { rejectWithValue }) => {
   try {
     const response = await apiClient.get('/social/friends');
@@ -79,6 +78,41 @@ export const removeFriend = createAsyncThunk('social/removeFriend', async (frien
   } catch (error: any) { return rejectWithValue(error.response?.data?.detail || '移除好友失敗'); }
 });
 
+// --- Thunks (關注相關) ---
+export const followUser = createAsyncThunk('social/followUser', async (userId: number, { dispatch, rejectWithValue }) => {
+    try {
+        await apiClient.post(`/social/follow/${userId}`);
+        dispatch(fetchUserProfile(userId)); // 成功後刷新關係
+        return userId;
+    } catch (error: any) { return rejectWithValue(error.response?.data?.detail || '關注用戶失敗'); }
+});
+export const unfollowUser = createAsyncThunk('social/unfollowUser', async (userId: number, { dispatch, rejectWithValue }) => {
+    try {
+        await apiClient.delete(`/social/follow/${userId}`);
+        dispatch(fetchUserProfile(userId)); // 成功後刷新關係
+        return userId;
+    } catch (error: any) { return rejectWithValue(error.response?.data?.detail || '取消關注失敗'); }
+});
+
+// --- Thunks (封鎖相關) ---
+export const blockUser = createAsyncThunk('social/blockUser', async (userId: number, { dispatch, rejectWithValue }) => {
+    try {
+        await apiClient.post(`/social/block/${userId}`);
+        dispatch(fetchUserProfile(userId)); // 成功後刷新關係
+        return userId;
+    } catch (error: any) { return rejectWithValue(error.response?.data?.detail || '封鎖用戶失敗'); }
+});
+export const unblockUser = createAsyncThunk('social/unblockUser', async (userId: number, { dispatch, rejectWithValue }) => {
+    try {
+        await apiClient.delete(`/social/block/${userId}`);
+        dispatch(fetchUserProfile(userId));
+        dispatch(fetchBlockedUsers());
+        return userId;
+    } catch (error: any) { return rejectWithValue(error.response?.data?.detail || '解除封鎖失敗'); }
+});
+
+
+
 export const searchUsers = createAsyncThunk('social/searchUsers', async (query: string, { rejectWithValue }) => {
   try {
     const response = await apiClient.get(`/users/search/public?q=${query}`);
@@ -104,6 +138,31 @@ export const sendFriendRequest = createAsyncThunk('social/sendFriendRequest', as
   } catch (error: any) { return rejectWithValue(error.response?.data?.detail || '發送好友請求失敗'); }
 });
 
+export const fetchFollowers = createAsyncThunk('social/fetchFollowers', async (_, { rejectWithValue }) => {
+    try {
+        const response = await apiClient.get('/social/followers');
+        return response.data.items;
+    } catch (e: any) { return rejectWithValue(e.response?.data?.detail); }
+});
+export const fetchFollowing = createAsyncThunk('social/fetchFollowing', async (_, { rejectWithValue }) => {
+    try {
+        const response = await apiClient.get('/social/following');
+        return response.data.items;
+    } catch (e: any) { return rejectWithValue(e.response?.data?.detail); }
+});
+export const fetchBlockedUsers = createAsyncThunk('social/fetchBlockedUsers', async (_, { rejectWithValue }) => {
+    try {
+        const response = await apiClient.get('/social/blocked');
+        return response.data.items;
+    } catch (e: any) { return rejectWithValue(e.response?.data?.detail); }
+});
+export const fetchSocialStats = createAsyncThunk('social/fetchSocialStats', async (_, { rejectWithValue }) => {
+    try {
+        const response = await apiClient.get('/social/statistics');
+        return response.data;
+    } catch (e: any) { return rejectWithValue(e.response?.data?.detail); }
+});
+
 
 const socialSlice = createSlice({
   name: 'social',
@@ -111,34 +170,25 @@ const socialSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      .addCase(fetchFriends.fulfilled, (state, action: PayloadAction<UserPublicProfile[]>) => {
-        state.friends = action.payload;
-      })
-      .addCase(fetchFriendRequests.fulfilled, (state, action: PayloadAction<FriendRequest[]>) => {
-        state.friendRequests = action.payload;
-      })
-      .addCase(searchUsers.fulfilled, (state, action) => {
-        state.searchResults = action.payload;
-      })
-      .addCase(fetchUserProfile.fulfilled, (state, action) => {
-        state.userProfile.data = action.payload.profile;
+      .addCase(fetchFriends.fulfilled, (state, action: PayloadAction<UserPublicProfile[]>) => { state.friends = action.payload; })
+      .addCase(fetchFriendRequests.fulfilled, (state, action: PayloadAction<FriendRequest[]>) => { state.friendRequests = action.payload; })
+      .addCase(searchUsers.fulfilled, (state, action) => { state.searchResults = action.payload; })
+      .addCase(fetchUserProfile.fulfilled, (state, action) => { 
+        state.userProfile.data = action.payload.profile; 
         state.userProfile.relationship = action.payload.relationship;
       })
-      .addMatcher((action) => action.type.endsWith('/pending'), (state) => {
-        state.status = 'loading';
-        state.error = null;
+      .addCase(fetchFollowers.fulfilled, (state, action: PayloadAction<UserPublicProfile[]>) => { state.followers = action.payload; })
+      .addCase(fetchFollowing.fulfilled, (state, action: PayloadAction<UserPublicProfile[]>) => { state.following = action.payload; })
+      .addCase(fetchBlockedUsers.fulfilled, (state, action: PayloadAction<BlockedUser[]>) => { state.blockedUsers = action.payload; })
+      .addCase(fetchSocialStats.fulfilled, (state, action: PayloadAction<SocialStats>) => { state.stats = action.payload; })
+      .addMatcher((action) => action.type.startsWith('social/') && action.type.endsWith('/pending'), (state) => { 
+        state.status = 'loading'; state.error = null; 
       })
-      // --- 開始：使用類型防護修正 addMatcher ---
-      .addMatcher(
-        isRejectedAction, // 使用我們的類型防護函式
-        (state, action) => {
-          state.status = 'failed';
-          state.error = action.payload as string;
-        }
-      )
-      // --- 結束：使用類型防護修正 addMatcher ---
-      .addMatcher((action) => action.type.endsWith('/fulfilled'), (state) => {
-        state.status = 'succeeded';
+      .addMatcher((action): action is RejectedAction => action.type.startsWith('social/') && isRejectedAction(action), (state, action) => {
+        state.status = 'failed'; state.error = action.payload as string; 
+      })
+      .addMatcher((action) => action.type.startsWith('social/') && action.type.endsWith('/fulfilled'), (state) => { 
+        state.status = 'succeeded'; 
       });
   },
 });
