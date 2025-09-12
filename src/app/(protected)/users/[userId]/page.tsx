@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchUserProfile, sendFriendRequest, removeFriend, followUser, unfollowUser, blockUser, unblockUser, fetchSocialStats } from '@/store/socialSlice';
 import { Button } from '@/components/ui/Button';
-import { User, Calendar, UserPlus, ArrowLeft, UserX, Heart, MoreHorizontal, ShieldOff, UserCheck } from 'lucide-react';
+import { User, Calendar, UserPlus, ArrowLeft, UserX, Heart, MoreHorizontal, ShieldOff, UserCheck, Lock } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/DropdownMenu';
 import { format } from 'date-fns';
 import Link from 'next/link';
@@ -42,10 +42,19 @@ export default function UserProfilePage() {
   const handleUnblock = () => dispatch(unblockUser(userId));
 
   if (status === 'loading' && !userProfile.data) { return <div className="text-center p-10">正在載入個人資料...</div>; }
-  if (status === 'failed' || !userProfile.data) { return <div className="text-center p-10">無法載入此用戶資料。</div>; }
+  if (status === 'failed' || !userProfile.data || userProfile.relationship?.is_blocked_by) { 
+    return (
+      <div className="text-center p-10">
+        <h2 className="text-xl font-semibold">找不到此用戶</h2>
+        <p className="text-muted-foreground mt-2">該用戶可能不存在或您沒有權限查看。</p>
+        <Button onClick={() => router.back()} className="mt-4">返回</Button>
+      </div>
+    );
+  }
 
   const { data: profile, relationship } = userProfile;
   const isSelf = currentUser?.id === profile.id;
+  const isPrivate = profile.privacy_level === 'private' && !isSelf;
 
   const renderActionButtons = () => {
     if (!relationship) return null;
@@ -90,6 +99,14 @@ export default function UserProfilePage() {
     );
   };
 
+  const PrivateProfileView = () => (
+    <div className="flex flex-col items-center justify-center text-center p-6">
+      <Lock className="w-12 h-12 text-muted-foreground mb-4" />
+      <h2 className="text-xl font-bold">此帳號為不公開</h2>
+      <p className="text-muted-foreground">您需要追蹤對方才能查看其詳細資訊。</p>
+    </div>
+  );
+
   return (
     <div className="max-w-4xl mx-auto">
       <button onClick={() => router.back()} className="flex items-center gap-2 mb-4 text-sm text-muted-foreground hover:text-foreground">
@@ -122,15 +139,31 @@ export default function UserProfilePage() {
                 <span className="ml-1 text-muted-foreground">關注者</span>
               </Link>
             </div>
-            <p className="mt-4 text-sm text-foreground/80">{profile.bio || '這位用戶很神秘，什麼都沒留下。'}</p>
-            <div className="flex items-center gap-4 mt-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Calendar className="w-4 h-4" />
-                <span>註冊於 {format(new Date(profile.created_at), 'yyyy年 MM月')}</span>
-              </div>
-            </div>
+            {!isPrivate && (
+              <>
+                <p className="mt-4 text-sm text-foreground/80">{profile.bio || '這位用戶很神秘，什麼都沒留下。'}</p>
+                <div className="flex items-center gap-4 mt-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-4 h-4" />
+                    <span>註冊於 {format(new Date(profile.created_at), 'yyyy年 MM月')}</span>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
+
+        <div className="border-t">
+          {isPrivate ? (
+            <PrivateProfileView />
+          ) : (
+            <div className="p-6 text-center text-muted-foreground">
+              {/* 未來可以在這裡顯示用戶的帖文、寵物列表等 */}
+              用戶的公開內容會顯示在這裡。
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );

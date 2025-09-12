@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Label } from "@/components/ui/Label";
 import { Switch } from "@/components/ui/Switch";
-import { Select } from "@/components/ui/Select"; // 導入新的 Select 組件
-import { PrivacySettings } from "@/types"; // 導入 PrivacySettings 類型
+import { Select } from "@/components/ui/Select";
+import { PrivacySettings } from "@/types";
 
 export default function PrivacySettingsComponent() {
   const dispatch = useAppDispatch();
@@ -66,12 +66,11 @@ export default function PrivacySettingsComponent() {
               value={settings.privacy_level}
               onChange={(e) => handleChange('privacy_level', e.target.value)}
             >
-              <option value="public">公開 (所有人可見)</option>
-              <option value="friends">僅好友可見</option>
-              <option value="private">不公開 (僅自己可見)</option>
+              <option value="public">公開 (所有人可見詳細資料)</option>
+              <option value="private">不公開 (他人僅可見關注數)</option>
             </Select>
             <p className="text-sm text-muted-foreground">
-              控制誰可以看到您的完整個人資料。
+              控制誰可以看到您的完整個人資料。所有用戶都可以在平台上被搜尋到。
             </p>
           </div>
 

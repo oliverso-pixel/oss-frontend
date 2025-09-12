@@ -26,6 +26,7 @@ export interface UserPublicProfile {
   is_verified: boolean;
   created_at: string;
   bio?: string | null;
+  privacy_level: 'public' | 'private';
 }
 
 // 根據後端 /api/v1/social/relationship/{user_id} 的回應結構
@@ -66,7 +67,7 @@ export interface FriendRequest {
 }
 
 export interface PrivacySettings {
-  privacy_level: 'public' | 'friends' | 'private';
+  privacy_level: 'public' | 'private';
   show_email: boolean;
   show_phone: boolean;
   show_online_status: boolean;

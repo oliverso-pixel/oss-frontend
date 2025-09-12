@@ -2,6 +2,7 @@
 import { createSlice, createAsyncThunk, PayloadAction, AnyAction } from '@reduxjs/toolkit';
 import apiClient from '@/lib/apiClient';
 import { PetTransferRequest, PetTransferHistory } from '@/types';
+import { AxiosError } from 'axios';
 
 interface RejectedAction extends AnyAction { payload: unknown; }
 function isRejectedAction(action: AnyAction): action is RejectedAction { return action.type.endsWith('/rejected'); }
@@ -75,9 +76,14 @@ export const cancelTransfer = createAsyncThunk('transfer/cancel', async (request
 export const fetchPetTransferHistory = createAsyncThunk('transfer/fetchHistory', async (petId: number, { rejectWithValue }) => {
     try {
         const response = await apiClient.get(`/pet-transfer/pets/${petId}/transfer/history`);
-        // return response.data.items;
         return response.data;
-    } catch (e: any) { return rejectWithValue(e.response?.data?.detail || '獲取轉移歷史失敗'); }
+    } catch (error) {
+      const e = error as AxiosError<{ detail: string }>;
+      if (e.response?.status === 404) {
+        return []; // 回傳一個空陣列，觸發 fulfilled 狀態
+      }
+      return rejectWithValue(e.response?.data?.detail || '獲取轉移歷史失敗'); 
+    }
 });
 
 

@@ -1,5 +1,5 @@
 // src/components/pets/PetForm.tsx
-import { Pet } from '@/types';
+import { Pet, SpeciesOption } from '@/types';
 import { useEffect, useState } from 'react';
 import { Button } from '../ui/Button';
 
@@ -8,12 +8,13 @@ interface PetFormProps {
   onSubmit: (formData: any) => void;
   onCancel: () => void;
   isLoading: boolean;
+  speciesList: SpeciesOption[];
 }
 
-export default function PetForm({ pet, onSubmit, onCancel, isLoading }: PetFormProps) {
+export default function PetForm({ pet, onSubmit, onCancel, isLoading, speciesList }: PetFormProps) {
   const [formData, setFormData] = useState({
     name: '',
-    species: 'dog',
+    species: speciesList[0]?.value || 'dog',
     breed: '',
     gender: 'unknown',
     birth_date: '',
@@ -24,18 +25,26 @@ export default function PetForm({ pet, onSubmit, onCancel, isLoading }: PetFormP
     if (pet) {
       setFormData({
         name: pet.name || '',
-        species: pet.species || 'dog',
+        species: pet.species || speciesList[0]?.value || 'dog',
         breed: pet.breed || '',
         gender: pet.gender || 'unknown',
         birth_date: pet.birth_date ? pet.birth_date.split('T')[0] : '',
         description: pet.description || '',
       });
     } else {
+      // setFormData({
+      //   name: '', species: 'dog', breed: '', gender: 'unknown', birth_date: '', description: '',
+      // });
       setFormData({
-        name: '', species: 'dog', breed: '', gender: 'unknown', birth_date: '', description: '',
+        name: '', 
+        species: speciesList[0]?.value || 'dog', 
+        breed: '', 
+        gender: 'unknown', 
+        birth_date: '', 
+        description: '',
       });
     }
-  }, [pet]);
+  }, [pet, speciesList]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -57,11 +66,11 @@ export default function PetForm({ pet, onSubmit, onCancel, isLoading }: PetFormP
         <div>
           <label className="block text-sm font-medium text-muted-foreground">物種</label>
           <select name="species" value={formData.species} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border rounded-md">
-            <option value="dog">狗</option>
-            <option value="cat">貓</option>
-            <option value="bird">鳥</option>
-            <option value="rabbit">兔子</option>
-            <option value="other">其他</option>
+            {speciesList.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
           </select>
         </div>
         <div>

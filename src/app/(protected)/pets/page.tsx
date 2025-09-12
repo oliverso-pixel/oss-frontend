@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { createPet, deletePet, fetchPets, updatePet, restorePet } from '@/store/petSlice';
+import { createPet, deletePet, fetchPets, updatePet, restorePet, fetchSpeciesList } from '@/store/petSlice';
 import { Button } from '@/components/ui/Button';
 import { PlusCircle, Edit, Trash2, PawPrint, Dog, RotateCcw, Search } from 'lucide-react';
 import Modal from '@/components/Modal';
@@ -47,12 +47,19 @@ const PetCard = ({ pet, onEdit, onDelete, onRestore }: { pet: Pet; onEdit: () =>
 
 export default function PetsPage() {
   const dispatch = useAppDispatch();
-  const { pets, status } = useAppSelector((state) => state.pets);
+  const { pets, status, speciesList } = useAppSelector((state) => state.pets);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPet, setEditingPet] = useState<Pet | null>(null);
   const [filter, setFilter] = useState<'active' | 'inactive'>('active');
 
-  useEffect(() => { dispatch(fetchPets(filter === 'inactive')); }, [dispatch, filter]);
+  // useEffect(() => { dispatch(fetchPets(filter === 'inactive')); }, [dispatch, filter]);
+  useEffect(() => { 
+    dispatch(fetchPets(filter === 'inactive')); 
+    // 如果物種列表是空的，就去 API 獲取一次
+    if (speciesList.length === 0) {
+      dispatch(fetchSpeciesList());
+    }
+  }, [dispatch, filter, speciesList.length]);
 
   const handleOpenModal = (pet: Pet | null = null) => {
     setEditingPet(pet);
@@ -130,6 +137,7 @@ export default function PetsPage() {
           onSubmit={handleSubmit}
           onCancel={handleCloseModal}
           isLoading={status === 'loading'}
+          speciesList={speciesList}
         />
       </Modal>
     </div>

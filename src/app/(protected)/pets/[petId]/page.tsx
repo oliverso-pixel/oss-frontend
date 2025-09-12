@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchPetById, uploadPetAvatar } from '@/store/petSlice';
 import { requestPetTransfer, fetchPetTransferHistory } from '@/store/transferSlice';
-import { ArrowLeft, Cake, PawPrint, Dog, Upload, Repeat, History, Heart, Bone } from 'lucide-react';
+import { ArrowLeft, Cake, PawPrint, Dog, Upload, Repeat, History, Heart, ShieldAlert } from 'lucide-react';
 import { format, differenceInYears, differenceInMonths } from 'date-fns';
 import { Button } from '@/components/ui/Button';
 import Modal from '@/components/Modal';
@@ -43,7 +43,7 @@ const TransferForm = ({ onSubmit, onCancel }: { onSubmit: (data: { toUserId: num
 
 const PetTimeline = ({ petId }: { petId: number }) => {
     const dispatch = useAppDispatch();
-    const { petHistory, status } = useAppSelector((state) => state.transfer);
+    const { petHistory, status, error } = useAppSelector((state) => state.transfer);
     const { selectedPet } = useAppSelector((state) => state.pets);
     
     useEffect(() => {
@@ -52,61 +52,60 @@ const PetTimeline = ({ petId }: { petId: number }) => {
         }
     }, [dispatch, petId]);
 
-    // 建立時間軸事件陣列
-    const timelineEvents = [];
-
-    // 1. 出生事件
-    if (selectedPet?.birth_date) {
-        timelineEvents.push({
-            date: selectedPet.birth_date,
+    // 建立時間軸事件陣列，並過濾掉無效日期
+    const timelineEvents = [
+        // 1. 出生事件
+        ...(selectedPet?.birth_date ? [{
+            rawDate: selectedPet.birth_date,
             type: 'birth',
             Icon: Heart,
             title: `${selectedPet.name} 出生了！`,
             description: `一個可愛的小生命來到了這個世界。`
-        });
-    }
-
-    // 2. 轉移歷史事件
-    // 使用安全檢查 (petHistory || [])
-    (petHistory || []).forEach(h => {
-        timelineEvents.push({
-            date: h.completed_at,
+        }] : []),
+        // 2. 轉移歷史事件
+        ...(petHistory || []).map(h => ({
+            rawDate: h.completed_at,
             type: 'transfer',
             Icon: Repeat,
             title: '更換了新主人',
             description: `由 ${h.from_user.display_name} 轉移給 ${h.to_user.display_name}。原因: ${h.notes || '未提供'}`
-        });
-    });
-
-    // 3. (未來可擴充) 貼文、相簿、醫療記錄等...
-
-    console.log(petHistory);
-    console.log(timelineEvents);
-
-    // 按日期排序時間軸
-    timelineEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        }))
+    ]
+    .map(event => ({ ...event, date: new Date(event.rawDate) })) // 將日期字串轉換為 Date 物件
+    .filter(event => !isNaN(event.date.getTime())) // 過濾掉無效的日期
+    .sort((a, b) => a.date.getTime() - b.date.getTime()); // 按日期排序
 
     return (
         <div className="mt-6">
             {status === 'loading' && <p>正在載入寵物足跡...</p>}
+            
+            {status === 'failed' && (
+                <div className="text-destructive flex items-center gap-2 p-4 bg-destructive/10 rounded-md">
+                    <ShieldAlert className="h-5 w-5" />
+                    <p>{error}</p>
+                </div>
+            )}
+            
             {status === 'succeeded' && timelineEvents.length === 0 && <p className="text-muted-foreground">這隻寵物還沒有任何記錄。</p>}
 
-            <div className="relative pl-6 after:absolute after:inset-y-0 after:w-0.5 after:bg-border after:left-0">
-                {timelineEvents.map((event, index) => (
-                    <div key={index} className="relative mb-8 grid grid-cols-[auto_1fr] items-start gap-x-4">
-                        <div className="relative flex h-6 w-6 items-center justify-center">
-                            <span className="absolute -left-6 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                                <event.Icon className="h-4 w-4" />
-                            </span>
+            {status === 'succeeded' && timelineEvents.length > 0 && (
+                <div className="relative pl-6 after:absolute after:inset-y-0 after:w-0.5 after:bg-border after:left-0">
+                    {timelineEvents.map((event, index) => (
+                        <div key={index} className="relative mb-8 grid grid-cols-[auto_1fr] items-start gap-x-4">
+                            <div className="relative flex h-6 w-6 items-center justify-center">
+                                <span className="absolute -left-6 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                                    <event.Icon className="h-4 w-4" />
+                                </span>
+                            </div>
+                            <div className="pt-1.5">
+                                <p className="text-sm text-muted-foreground">{format(event.date, 'yyyy年 MM月 dd日')}</p>
+                                <h4 className="font-semibold">{event.title}</h4>
+                                <p className="text-sm text-foreground/80">{event.description}</p>
+                            </div>
                         </div>
-                        <div className="pt-1.5">
-                            <p className="text-sm text-muted-foreground">{format(new Date(event.date), 'yyyy年 MM月 dd日')}</p>
-                            <h4 className="font-semibold">{event.title}</h4>
-                            <p className="text-sm text-foreground/80">{event.description}</p>
-                        </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };
@@ -154,7 +153,7 @@ export default function PetDetailPage() {
   };
 
   const isOwner = currentUser?.id === selectedPet?.user_id;
-  console.log(petStatus);
+  
   if (petStatus === 'loading' || !selectedPet) { return <div>正在載入寵物資料...</div>;}
 
   return (
