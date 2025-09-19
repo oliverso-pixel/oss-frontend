@@ -55,6 +55,7 @@ export interface Pet {
   created_at: string;
   updated_at: string;
   owner_username?: string;
+  privacy_level: 'public' | 'private';
 }
 
 export interface FriendRequest {
@@ -101,7 +102,7 @@ export interface SpeciesOption {
     label: string;
 }
 
-// --- 根據 pet-transfer API 的回應結構 ---
+// --- pet-transfer API ---
 export interface PetTransferRequest {
     id: number;
     pet_id: number;
@@ -112,7 +113,6 @@ export interface PetTransferRequest {
     transfer_reason: string | null;
     notes: string | null;
     created_at: string;
-    // 根據 API 回應，可能會包含關聯的 pet 和 user 資料
     pet: Pet;
     from_user: UserPublicProfile;
     to_user: UserPublicProfile;
@@ -129,5 +129,52 @@ export interface PetTransferHistory {
     notes: string | null;
     from_user: UserPublicProfile;
     to_user: UserPublicProfile;
+}
+
+// --- 醫療與疫苗記錄類型 ---
+export interface VaccinationRecord {
+  id: number;
+  pet_id: number;
+  vaccine_type_id: number;
+  vaccine_name: string;
+  vaccination_date: string;
+  next_due_date: string | null;
+  batch_number: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: number;
+}
+
+export interface Clinic {
+  id: number;
+  name: string;
+  phone: string;
+  address: {
+    city: string;
+    district: string;
+    street: string;
+  };
+  is_verified: boolean;
+}
+
+export interface MedicalRecord {
+  id: number;
+  pet_id: number;
+  visit_date: string;
+  visit_type: string;
+  chief_complaint: string;
+  symptoms: string | null;
+  diagnosis: string;
+  treatment: string | null;
+  notes: string | null;
+  weight: number | null;
+  temperature: number | null;
+  clinic_id: number | null;
+  created_at: string;
+  updated_at: string;
+  created_by: number;
+  vaccinations: VaccinationRecord[];
+  clinic: Clinic | null;
 }
 

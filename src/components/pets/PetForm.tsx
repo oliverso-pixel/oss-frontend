@@ -19,6 +19,7 @@ export default function PetForm({ pet, onSubmit, onCancel, isLoading, speciesLis
     gender: 'unknown',
     birth_date: '',
     description: '',
+    privacy_level: 'public',
   });
 
   useEffect(() => {
@@ -30,11 +31,9 @@ export default function PetForm({ pet, onSubmit, onCancel, isLoading, speciesLis
         gender: pet.gender || 'unknown',
         birth_date: pet.birth_date ? pet.birth_date.split('T')[0] : '',
         description: pet.description || '',
+        privacy_level: pet.privacy_level || 'public',
       });
     } else {
-      // setFormData({
-      //   name: '', species: 'dog', breed: '', gender: 'unknown', birth_date: '', description: '',
-      // });
       setFormData({
         name: '', 
         species: speciesList[0]?.value || 'dog', 
@@ -42,6 +41,7 @@ export default function PetForm({ pet, onSubmit, onCancel, isLoading, speciesLis
         gender: 'unknown', 
         birth_date: '', 
         description: '',
+        privacy_level: 'public',
       });
     }
   }, [pet, speciesList]);
@@ -92,6 +92,13 @@ export default function PetForm({ pet, onSubmit, onCancel, isLoading, speciesLis
         <div>
           <label className="block text-sm font-medium text-muted-foreground">描述</label>
           <textarea name="description" value={formData.description} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border rounded-md" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-muted-foreground">隱私設定</label>
+          <select name="privacy_level" value={formData.privacy_level} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border rounded-md">
+            <option value="public">公開 (所有人可見詳細資料)</option>
+            <option value="private">不公開 (他人僅可見名稱與照片)</option>
+          </select>
         </div>
       </div>
       <div className="flex justify-end gap-2 mt-6">

@@ -7,27 +7,39 @@ import { searchPets, fetchSpeciesList, clearSearchResults } from '@/store/petSli
 import { Button } from '@/components/ui/Button';
 import { Pet } from '@/types';
 import Link from 'next/link';
-import { Dog, Search, X } from 'lucide-react';
+import { Dog, Search, X, Lock } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Card } from '@/components/ui/Card';
 
-const PetSearchResultCard = ({ pet }: { pet: Pet }) => (
-    <Card className="p-4 flex items-center gap-4 hover:shadow-md transition-shadow">
-         <Link href={`/pets/${pet.id}`} className="w-16 h-16 rounded-full bg-secondary flex-shrink-0 flex items-center justify-center">
-            {pet.avatar_url ? (
-                <img src={pet.avatar_url} alt={pet.name} className="w-full h-full object-cover rounded-full" />
-            ) : (
-                <Dog size={32} className="text-muted-foreground"/>
-            )}
-        </Link>
-        <div>
-            <Link href={`/pets/${pet.id}`}><h3 className="font-bold text-primary hover:underline">{pet.name}</h3></Link>
-            <p className="text-sm text-muted-foreground capitalize">{pet.breed || pet.species}</p>
-            {pet.owner_username && <p className="text-xs text-muted-foreground mt-1">主人: {pet.owner_username}</p>}
-        </div>
-    </Card>
-);
+const PetSearchResultCard = ({ pet }: { pet: Pet }) => {
+    const isPrivate = pet.privacy_level === 'private';
+
+    return (
+        <Card className="p-4 flex items-center gap-4 hover:shadow-md transition-shadow">
+            <Link href={`/pets/${pet.id}`} className="w-16 h-16 rounded-full bg-secondary flex-shrink-0 flex items-center justify-center">
+                {pet.avatar_url ? (
+                    <img src={pet.avatar_url} alt={pet.name} className="w-full h-full object-cover rounded-full" />
+                ) : (
+                    <Dog size={32} className="text-muted-foreground"/>
+                )}
+            </Link>
+            <div>
+                <div className="flex items-center gap-2">
+                    <Link href={`/pets/${pet.id}`}><h3 className="font-bold text-primary hover:underline">{pet.name}</h3></Link>
+                    {isPrivate && <Lock size={12} className="text-muted-foreground" />}
+                </div>
+                {!isPrivate && (
+                    <>
+                        <p className="text-sm text-muted-foreground capitalize">{pet.breed || pet.species}</p>
+                        {pet.owner_username && <p className="text-xs text-muted-foreground mt-1">主人: {pet.owner_username}</p>}
+                    </>
+                )}
+            </div>
+        </Card>
+    );
+};
+
 
 export default function PetSearchPage() {
   const dispatch = useAppDispatch();
@@ -38,7 +50,6 @@ export default function PetSearchPage() {
 
   useEffect(() => {
     dispatch(fetchSpeciesList());
-    // 當用戶離開此頁面時，清空搜尋結果
     return () => {
         dispatch(clearSearchResults());
     }
