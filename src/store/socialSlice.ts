@@ -86,6 +86,7 @@ export const followUser = createAsyncThunk('social/followUser', async (userId: n
         return userId;
     } catch (error: any) { return rejectWithValue(error.response?.data?.detail || '關注用戶失敗'); }
 });
+
 export const unfollowUser = createAsyncThunk('social/unfollowUser', async (userId: number, { dispatch, rejectWithValue }) => {
     try {
         await apiClient.delete(`/social/follow/${userId}`);
@@ -102,6 +103,7 @@ export const blockUser = createAsyncThunk('social/blockUser', async (userId: num
         return userId;
     } catch (error: any) { return rejectWithValue(error.response?.data?.detail || '封鎖用戶失敗'); }
 });
+
 export const unblockUser = createAsyncThunk('social/unblockUser', async (userId: number, { dispatch, rejectWithValue }) => {
     try {
         await apiClient.delete(`/social/block/${userId}`);
@@ -111,8 +113,7 @@ export const unblockUser = createAsyncThunk('social/unblockUser', async (userId:
     } catch (error: any) { return rejectWithValue(error.response?.data?.detail || '解除封鎖失敗'); }
 });
 
-
-
+// ---  ---
 export const searchUsers = createAsyncThunk('social/searchUsers', async (query: string, { rejectWithValue }) => {
   try {
     const response = await apiClient.get(`/users/search/public?q=${query}`);
@@ -138,24 +139,27 @@ export const sendFriendRequest = createAsyncThunk('social/sendFriendRequest', as
   } catch (error: any) { return rejectWithValue(error.response?.data?.detail || '發送好友請求失敗'); }
 });
 
-export const fetchFollowers = createAsyncThunk('social/fetchFollowers', async (_, { rejectWithValue }) => {
+export const fetchFollowers = createAsyncThunk('social/fetchFollowers', async (userId: number, { rejectWithValue }) => {
     try {
-        const response = await apiClient.get('/social/followers');
+        const response = await apiClient.get(`/social/users/${userId}/followers`);
         return response.data.items;
     } catch (e: any) { return rejectWithValue(e.response?.data?.detail); }
 });
-export const fetchFollowing = createAsyncThunk('social/fetchFollowing', async (_, { rejectWithValue }) => {
+
+export const fetchFollowing = createAsyncThunk('social/fetchFollowing', async (userId: number, { rejectWithValue }) => {
     try {
-        const response = await apiClient.get('/social/following');
+        const response = await apiClient.get(`/social/users/${userId}/following`);
         return response.data.items;
     } catch (e: any) { return rejectWithValue(e.response?.data?.detail); }
 });
+
 export const fetchBlockedUsers = createAsyncThunk('social/fetchBlockedUsers', async (_, { rejectWithValue }) => {
     try {
         const response = await apiClient.get('/social/blocked');
         return response.data.items;
     } catch (e: any) { return rejectWithValue(e.response?.data?.detail); }
 });
+
 export const fetchSocialStats = createAsyncThunk('social/fetchSocialStats', async (_, { rejectWithValue }) => {
     try {
         const response = await apiClient.get('/social/statistics');

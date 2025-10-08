@@ -10,10 +10,14 @@ import { Users } from 'lucide-react';
 export default function FollowersPage() {
     const dispatch = useAppDispatch();
     const { followers, status } = useAppSelector((state) => state.social);
+    const { user } = useAppSelector((state) => state.auth); // 獲取當前登入用戶
 
     useEffect(() => {
-        dispatch(fetchFollowers());
-    }, [dispatch]);
+        // 只有在獲取到用戶 ID 後才發出請求
+        if (user?.id) {
+            dispatch(fetchFollowers(user.id));
+        }
+    }, [dispatch, user?.id]);
 
     return (
         <div className="max-w-4xl mx-auto">

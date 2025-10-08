@@ -4,7 +4,7 @@
 import { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { fetchUserProfile, sendFriendRequest, removeFriend, followUser, unfollowUser, blockUser, unblockUser, fetchSocialStats } from '@/store/socialSlice';
+import { fetchUserProfile, sendFriendRequest, removeFriend, followUser, unfollowUser, blockUser, unblockUser } from '@/store/socialSlice';
 import { Button } from '@/components/ui/Button';
 import { User, Calendar, UserPlus, ArrowLeft, UserX, Heart, MoreHorizontal, ShieldOff, UserCheck, Lock } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/DropdownMenu';
@@ -16,13 +16,12 @@ export default function UserProfilePage() {
   const router = useRouter();
   const userId = Number(params.userId);
   const dispatch = useAppDispatch();
-  const { userProfile, stats, status } = useAppSelector((state) => state.social);
+  const { userProfile, status } = useAppSelector((state) => state.social);
   const { user: currentUser } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
     if (userId) {
       dispatch(fetchUserProfile(userId));
-      dispatch(fetchSocialStats());
     }
   }, [userId, dispatch]);
 
@@ -42,6 +41,7 @@ export default function UserProfilePage() {
   const handleUnblock = () => dispatch(unblockUser(userId));
 
   if (status === 'loading' && !userProfile.data) { return <div className="text-center p-10">正在載入個人資料...</div>; }
+  
   if (status === 'failed' || !userProfile.data || userProfile.relationship?.is_blocked_by) { 
     return (
       <div className="text-center p-10">
@@ -54,16 +54,12 @@ export default function UserProfilePage() {
 
   const { data: profile, relationship } = userProfile;
   const isSelf = currentUser?.id === profile.id;
-  const isPrivate = profile.privacy_level === 'private' && !isSelf;
+  
+  // 新的權限判斷邏輯
+  const canViewFullProfile = profile.privacy_level === 'public' || (profile.privacy_level === 'private' && relationship?.is_friend);
 
   const renderActionButtons = () => {
     if (!relationship) return null;
-
-    // 如果被對方封鎖，不顯示任何按鈕
-    if (relationship.is_blocked_by) {
-      return <p className="text-sm text-muted-foreground">您無法與此用戶互動。</p>;
-    }
-    // 如果已封鎖對方
     if (relationship.is_blocked) {
       return <Button variant="outline" onClick={handleUnblock}><UserCheck className="mr-2 h-4 w-4" /> 解除封鎖</Button>;
     }
@@ -99,14 +95,6 @@ export default function UserProfilePage() {
     );
   };
 
-  const PrivateProfileView = () => (
-    <div className="flex flex-col items-center justify-center text-center p-6">
-      <Lock className="w-12 h-12 text-muted-foreground mb-4" />
-      <h2 className="text-xl font-bold">此帳號為不公開</h2>
-      <p className="text-muted-foreground">您需要追蹤對方才能查看其詳細資訊。</p>
-    </div>
-  );
-
   return (
     <div className="max-w-4xl mx-auto">
       <button onClick={() => router.back()} className="flex items-center gap-2 mb-4 text-sm text-muted-foreground hover:text-foreground">
@@ -129,17 +117,23 @@ export default function UserProfilePage() {
               </div>
               {!isSelf && renderActionButtons()}
             </div>
+            
             <div className="flex items-center gap-6 mt-4 text-sm text-foreground">
-              <Link href="/following" className="hover:underline">
-                <span className="font-bold">{stats?.total_following || 0}</span>
-                <span className="ml-1 text-muted-foreground">正在關注</span>
-              </Link>
-              <Link href="/followers" className="hover:underline">
-                <span className="font-bold">{stats?.total_followers || 0}</span>
-                <span className="ml-1 text-muted-foreground">關注者</span>
-              </Link>
+                <div>
+                    <span className="font-bold">{profile.total_posts || 0}</span>
+                    <span className="ml-1 text-muted-foreground">帖文</span>
+                </div>
+                <Link href={`/users/${userId}/following`} className="hover:underline">
+                    <span className="font-bold">{profile.total_following || 0}</span>
+                    <span className="ml-1 text-muted-foreground">正在關注</span>
+                </Link>
+                <Link href={`/users/${userId}/followers`} className="hover:underline">
+                    <span className="font-bold">{profile.total_followers || 0}</span>
+                    <span className="ml-1 text-muted-foreground">關注者</span>
+                </Link>
             </div>
-            {!isPrivate && (
+
+            {canViewFullProfile && (
               <>
                 <p className="mt-4 text-sm text-foreground/80">{profile.bio || '這位用戶很神秘，什麼都沒留下。'}</p>
                 <div className="flex items-center gap-4 mt-4 text-sm text-muted-foreground">
@@ -153,13 +147,17 @@ export default function UserProfilePage() {
           </div>
         </div>
 
-        <div className="border-t">
-          {isPrivate ? (
-            <PrivateProfileView />
-          ) : (
-            <div className="p-6 text-center text-muted-foreground">
+        <div className="border-t mt-6 pt-6">
+          {canViewFullProfile ? (
+            <div className="text-center text-muted-foreground">
               {/* 未來可以在這裡顯示用戶的帖文、寵物列表等 */}
               用戶的公開內容會顯示在這裡。
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center text-center p-6">
+              <Lock className="w-12 h-12 text-muted-foreground mb-4" />
+              <h2 className="text-xl font-bold">此帳號為不公開</h2>
+              <p className="text-muted-foreground">成為好友後即可查看對方的詳細資訊。</p>
             </div>
           )}
         </div>

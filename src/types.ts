@@ -27,6 +27,9 @@ export interface UserPublicProfile {
   created_at: string;
   bio?: string | null;
   privacy_level: 'public' | 'private';
+  total_posts?: number;
+  total_following?: number;
+  total_followers?: number;
 }
 
 // 根據後端 /api/v1/social/relationship/{user_id} 的回應結構

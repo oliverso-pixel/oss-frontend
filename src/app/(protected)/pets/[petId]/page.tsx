@@ -221,7 +221,8 @@ export default function PetDetailPage() {
 
   const isOwner = currentUser?.id === selectedPet?.user_id;
   const isAdmin = currentUser?.roles.includes('admin');
-  const canViewMedical = isOwner || isAdmin;
+//   const canViewMedical = isOwner || isAdmin;
+  const canViewMedical = isOwner;
   const isPrivateAndNotOwner = selectedPet.privacy_level === 'private' && !isOwner;
 
   return (
