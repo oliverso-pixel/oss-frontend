@@ -4,6 +4,7 @@ import authReducer from './authSlice';
 import petReducer from './petSlice';
 import socialReducer from './socialSlice';
 import transferReducer from './transferSlice';
+import postReducer from './postSlice';
 
 export const store = configureStore({
   reducer: {
@@ -11,6 +12,7 @@ export const store = configureStore({
     pets: petReducer,
     social: socialReducer,
     transfer: transferReducer,
+    posts: postReducer,
   },
 });
 

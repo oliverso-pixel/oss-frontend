@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, PawPrint, Users, Compass, UserPlus, Settings, UserCheck, Heart, Search, Repeat } from "lucide-react";
+import { Home, PawPrint, Users, Compass, UserPlus, Settings, UserCheck, Heart, Search, Repeat, Rss } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppSelector } from "@/store/hooks";
 
@@ -13,6 +13,7 @@ export default function Sidebar() {
 
   const navItems = [
     { href: "/dashboard", label: "儀表板", icon: Home },
+    { href: "/feed", label: "動態牆", icon: Rss },
     { href: "/pets", label: "我的寵物", icon: PawPrint },
     { href: "/pets/search", label: "搜尋寵物", icon: Search },
     { href: "/transfer-center", label: "轉移中心", icon: Repeat },

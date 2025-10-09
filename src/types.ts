@@ -8,13 +8,19 @@ export interface UserResponse {
   bio: string | null;
   phone: string | null;
   avatar_url: string | null;
+  background_image_url: string | null;
   is_active: boolean;
   is_verified: boolean;
   two_factor_enabled: boolean;
   last_login_at: string | null;
   created_at: string;
   updated_at: string;
-  roles: string[];
+  linked_roles: string[];
+  birth_date: string | null;
+  privacy_level: 'public' | 'private';
+  total_posts?: number;
+  total_following?: number;
+  total_followers?: number;
 }
 
 // 根據 app/schemas/user.py 的 UserPublicResponse (用於公開展示的用戶資料)
@@ -30,6 +36,8 @@ export interface UserPublicProfile {
   total_posts?: number;
   total_following?: number;
   total_followers?: number;
+  from_user: UserPublicProfile;
+  to_user: UserPublicProfile;
 }
 
 // 根據後端 /api/v1/social/relationship/{user_id} 的回應結構
@@ -147,6 +155,8 @@ export interface VaccinationRecord {
   created_at: string;
   updated_at: string;
   created_by: number;
+  vaccinations: VaccinationRecord[];
+  clinic: Clinic | null;
 }
 
 export interface Clinic {
@@ -179,5 +189,52 @@ export interface MedicalRecord {
   created_by: number;
   vaccinations: VaccinationRecord[];
   clinic: Clinic | null;
+}
+
+// --- 貼文相關類型 ---
+export interface Media {
+  id: number;
+  url: string;
+  type: 'image' | 'video';
+}
+
+export interface Post {
+  id: number;
+  content: string;
+  visibility: 'public' | 'friends' | 'private';
+  location: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  created_at: string;
+  updated_at: string;
+  author: UserPublicProfile;
+  pet: Pet | null;
+  media: Media[];
+  tags: string[];
+  statistics: PostStatistics;
+  is_liked_by_user: boolean;
+  comments_enabled: boolean;
+}
+
+export interface PostStatistics {
+  likes_count: number;
+  comments_count: number;
+  reposts_count: number;
+}
+
+export interface Comment {
+  id: number;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  author: UserPublicProfile;
+  parent_id: number | null;
+  post_id: number;
+  replies?: Comment[];
+  children_count?: number;
+  is_liked_by_user: boolean;
+  likes_count: number;
+  deleted_at: string | null;
+  quoted_comment: Comment | null;
 }
 

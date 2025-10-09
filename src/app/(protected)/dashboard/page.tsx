@@ -2,8 +2,7 @@
 "use client";
 
 import { useAppSelector } from '@/store/hooks';
-// import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { PawPrint, Users } from 'lucide-react';
+import { PawPrint, Users, Rss } from 'lucide-react';
 import Link from 'next/link';
 
 export default function DashboardPage() {
@@ -18,6 +17,18 @@ export default function DashboardPage() {
       <h1 className="text-3xl font-bold mb-6">儀表板</h1>
       <h2 className="text-2xl mb-4">歡迎回來, {user.display_name || user.username}!</h2> 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">動態牆</CardTitle>
+            <Rss className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground">
+              看看好友與關注對象的最新動態。
+            </p>
+            <Link href="/feed" className="text-primary font-bold mt-2 inline-block">前往動態牆 &rarr;</Link>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">我的寵物</CardTitle>
