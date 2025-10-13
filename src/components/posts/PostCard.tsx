@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useAppDispatch } from "@/store/hooks";
 import { likePost, unlikePost } from "@/store/postSlice";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 interface PostCardProps {
     post: Post;
@@ -17,21 +18,28 @@ interface PostCardProps {
 
 export default function PostCard({ post, isLink = true }: PostCardProps) {
     const dispatch = useAppDispatch();
+    const router = useRouter();
 
     const handleLikeToggle = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        if (post.is_liked_by_user) {
+        if (post.is_liked) {
             dispatch(unlikePost(post.id));
         } else {
             dispatch(likePost(post.id));
         }
     };
 
-    const cardContent = (
-        <div className="bg-background rounded-lg border shadow-sm p-4 hover:shadow-md transition-shadow">
+    const navigateToPost = () => {
+        if (isLink) {
+            router.push(`/posts/${post.id}`);
+        }
+    }
+
+    return (
+        <div className="bg-background rounded-lg border shadow-sm p-4 hover:shadow-md transition-shadow" onClick={navigateToPost}>
             <div className="flex items-start gap-4">
-                <Link href={`/users/${post.author.id}`}>
+                <Link href={`/users/${post.author.id}`} onClick={(e) => e.stopPropagation()}>
                     {post.author.avatar_url ? (
                         <img src={post.author.avatar_url} alt={post.author.username} className="w-12 h-12 rounded-full object-cover" />
                     ) : (
@@ -42,7 +50,7 @@ export default function PostCard({ post, isLink = true }: PostCardProps) {
                 </Link>
                 <div className="flex-1">
                     <div className="flex items-center gap-2">
-                        <Link href={`/users/${post.author.id}`} className="font-bold hover:underline">{post.author.display_name || post.author.username}</Link>
+                        <Link href={`/users/${post.author.id}`} onClick={(e) => e.stopPropagation()} className="font-bold hover:underline">{post.author.display_name || post.author.username}</Link>
                         <span className="text-sm text-muted-foreground">· {formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: zhTW })}</span>
                     </div>
                     <p className="text-sm text-muted-foreground">@{post.author.username}</p>
@@ -61,20 +69,15 @@ export default function PostCard({ post, isLink = true }: PostCardProps) {
 
             <div className="flex items-center gap-6 mt-4 pt-2 border-t">
                 <button onClick={handleLikeToggle} className="flex items-center gap-1.5 text-muted-foreground hover:text-red-500">
-                    <Heart size={18} className={cn(post.is_liked_by_user && "fill-current text-red-500")} />
-                    <span className="text-sm">{post.statistics ? post.statistics.likes_count : 0}</span>
+                    <Heart size={18} className={cn(post.is_liked && "fill-current text-red-500")} />
+                    <span className="text-sm">{post.like_count || 0}</span>
                 </button>
-                <Link href={`/posts/${post.id}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-primary">
+                <div className="flex items-center gap-1.5 text-muted-foreground hover:text-primary">
                     <MessageCircle size={18} />
-                    <span className="text-sm">{post.statistics ? post.statistics.comments_count : 0}</span>
-                </Link>
+                    <span className="text-sm">{post.comment_count || 0}</span>
+                </div>
             </div>
         </div>
     );
-    
-    if(isLink) {
-        return <Link href={`/posts/${post.id}`}>{cardContent}</Link>
-    }
-    return cardContent;
 }
 

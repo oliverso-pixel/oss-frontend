@@ -141,15 +141,15 @@ export const sendFriendRequest = createAsyncThunk('social/sendFriendRequest', as
 
 export const fetchFollowers = createAsyncThunk('social/fetchFollowers', async (userId: number, { rejectWithValue }) => {
     try {
-        const response = await apiClient.get(`/social/users/${userId}/followers`);
-        return response.data.items;
+      const response = await apiClient.get(`/social/users/${userId}/followers`);
+      return response.data.items;
     } catch (e: any) { return rejectWithValue(e.response?.data?.detail); }
 });
 
 export const fetchFollowing = createAsyncThunk('social/fetchFollowing', async (userId: number, { rejectWithValue }) => {
     try {
-        const response = await apiClient.get(`/social/users/${userId}/following`);
-        return response.data.items;
+      const response = await apiClient.get(`/social/users/${userId}/following`);
+      return response.data.items;
     } catch (e: any) { return rejectWithValue(e.response?.data?.detail); }
 });
 

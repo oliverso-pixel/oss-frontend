@@ -1,21 +1,29 @@
 // src/components/AuthGuard.tsx
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppSelector } from '@/store/hooks';
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const { token } = useAppSelector((state) => state.auth);
   const router = useRouter();
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    // 等待客戶端狀態恢復後再檢查
-    if (typeof window !== 'undefined' && !token) {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (isClient && !token) {
       router.push('/login');
     }
-  }, [token, router]);
+  }, [token, router, isClient]);
 
-  // 如果 token 存在，渲染子組件；否則渲染 null 或 loading 狀態
+  if (!isClient || !token) {
+    return null; // 或者可以顯示一個載入中的畫面
+  }
+
   return token ? <>{children}</> : null;
 }
+

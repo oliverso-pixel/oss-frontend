@@ -123,11 +123,11 @@ export default function UserProfilePage() {
                     <span className="font-bold">{profile.total_posts || 0}</span>
                     <span className="ml-1 text-muted-foreground">帖文</span>
                 </div>
-                <Link href={`/users/${userId}/following`} className="hover:underline">
+                <Link href={`/following`} className="hover:underline">
                     <span className="font-bold">{profile.total_following || 0}</span>
                     <span className="ml-1 text-muted-foreground">正在關注</span>
                 </Link>
-                <Link href={`/users/${userId}/followers`} className="hover:underline">
+                <Link href={`/followers`} className="hover:underline">
                     <span className="font-bold">{profile.total_followers || 0}</span>
                     <span className="ml-1 text-muted-foreground">關注者</span>
                 </Link>

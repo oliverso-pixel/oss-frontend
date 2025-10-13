@@ -155,8 +155,6 @@ export interface VaccinationRecord {
   created_at: string;
   updated_at: string;
   created_by: number;
-  vaccinations: VaccinationRecord[];
-  clinic: Clinic | null;
 }
 
 export interface Clinic {
@@ -211,15 +209,14 @@ export interface Post {
   pet: Pet | null;
   media: Media[];
   tags: string[];
-  statistics: PostStatistics;
-  is_liked_by_user: boolean;
+  like_count: number;
+  comment_count: number;
+  view_count: number;
+  is_liked: boolean;
   comments_enabled: boolean;
-}
-
-export interface PostStatistics {
-  likes_count: number;
-  comments_count: number;
-  reposts_count: number;
+  user_can_edit?: boolean;
+  user_can_delete?: boolean;
+  comments?: Comment[];
 }
 
 export interface Comment {
@@ -227,14 +224,18 @@ export interface Comment {
   content: string;
   created_at: string;
   updated_at: string;
-  author: UserPublicProfile;
+  user: UserPublicProfile; // API 回傳的是 user 而非 author
   parent_id: number | null;
   post_id: number;
   replies?: Comment[];
-  children_count?: number;
-  is_liked_by_user: boolean;
-  likes_count: number;
+  reply_count?: number; // API 回傳的是 reply_count
+  is_liked: boolean; // API 回傳的是 is_liked
+  like_count: number; // API 回傳的是 like_count
+  is_deleted: boolean;
+  deleted_by: number | null;
   deleted_at: string | null;
+  deletion_reason: string | null;
   quoted_comment: Comment | null;
+  quoted_comment_id: number | null;
 }
 

@@ -1,7 +1,7 @@
 // src/store/postSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction, AnyAction } from '@reduxjs/toolkit';
 import apiClient from '@/lib/apiClient';
-import { Post, Comment } from '@/types';
+import { Post, Comment, Media } from '@/types';
 
 interface RejectedAction extends AnyAction {
   payload: unknown;
@@ -44,7 +44,7 @@ export const fetchPostById = createAsyncThunk('posts/fetchPostById', async (post
     } catch (e: any) { return rejectWithValue(e.response?.data?.detail); }
 });
 
-export const createPost = createAsyncThunk('posts/createPost', async (postData: { content: string, visibility: 'public' | 'friends' | 'private', tags: string[], media_ids?: number[] }, { dispatch, rejectWithValue }) => {
+export const createPost = createAsyncThunk('posts/createPost', async (postData: { content: string, visibility: 'public' | 'friends' | 'private', location: string | null, tags: string[], media_ids?: number[], pet_id?: number[], latitude?: number, longitude?: number, comments_enabled: boolean }, { dispatch, rejectWithValue }) => {
   try {
     const response = await apiClient.post('/posts', postData);
     dispatch(fetchFeed());
@@ -53,6 +53,34 @@ export const createPost = createAsyncThunk('posts/createPost', async (postData: 
     return rejectWithValue(e.response?.data?.detail);
   }
 });
+
+export const updatePost = createAsyncThunk(
+  'posts/updatePost',
+  async ({ postId, postData }: { postId: number, postData: Partial<Post> }, { dispatch, rejectWithValue }) => {
+    try {
+      const response = await apiClient.put(`/posts/${postId}`, postData);
+      // 同時更新 feed 和 activePost
+      dispatch(fetchFeed());
+      dispatch(fetchPostById(postId));
+      return response.data;
+    } catch (e: any) {
+      return rejectWithValue(e.response?.data?.detail);
+    }
+  }
+);
+
+export const toggleComments = createAsyncThunk(
+    'posts/toggleComments',
+    async ({ postId, enabled }: { postId: number, enabled: boolean }, { dispatch, rejectWithValue }) => {
+        try {
+            await apiClient.post(`/posts/${postId}/comments/toggle?enabled=${enabled}`);
+            dispatch(fetchPostById(postId)); 
+            return { postId, enabled };
+        } catch (e: any) {
+            return rejectWithValue(e.response?.data?.detail);
+        }
+    }
+);
 
 export const uploadMedia = createAsyncThunk('posts/uploadMedia', async (file: File, { rejectWithValue }) => {
     try {
@@ -83,18 +111,43 @@ export const unlikePost = createAsyncThunk('posts/unlikePost', async (postId: nu
   }
 });
 
-export const fetchComments = createAsyncThunk('posts/fetchComments', async (postId: number, { rejectWithValue }) => {
+export const fetchComments = createAsyncThunk('posts/fetchComments', async ({ postId, sortBy }: { postId: number, sortBy?: string }, { rejectWithValue }) => {
     try {
-        const response = await apiClient.get(`/posts/${postId}/comments`);
-        return response.data.items;
+        const response = await apiClient.get(`/posts/${postId}/comments`, { params: { sort_by: sortBy } });
+        return response.data;
     } catch(e: any) { return rejectWithValue(e.response?.data?.detail); }
 });
 
-export const addComment = createAsyncThunk('posts/addComment', async ({ postId, content, parentId }: { postId: number, content: string, parentId?: number | null }, { dispatch, rejectWithValue }) => {
+export const addComment = createAsyncThunk('posts/addComment', async ({ postId, content, parent_id, quoted_comment_id }: { postId: number, content: string, parent_id?: number | null, quoted_comment_id?: number | null }, { dispatch, rejectWithValue }) => {
     try {
-        const response = await apiClient.post(`/posts/${postId}/comments`, { content, parent_id: parentId });
-        dispatch(fetchComments(postId)); // Refresh comments after adding
+        const response = await apiClient.post(`/posts/${postId}/comments`, { content, parent_id, quoted_comment_id });
+        dispatch(fetchComments({ postId })); 
+        dispatch(fetchPostById(postId));
         return response.data;
+    } catch(e: any) { return rejectWithValue(e.response?.data?.detail); }
+});
+
+export const likeComment = createAsyncThunk('posts/likeComment', async (commentId: number, { rejectWithValue }) => {
+    try {
+        await apiClient.post(`/posts/comments/${commentId}/like`);
+        return commentId;
+    } catch(e: any) { return rejectWithValue(e.response?.data?.detail); }
+});
+
+export const unlikeComment = createAsyncThunk('posts/unlikeComment', async (commentId: number, { rejectWithValue }) => {
+    try {
+        await apiClient.delete(`/posts/comments/${commentId}/like`);
+        return commentId;
+    } catch(e: any) { return rejectWithValue(e.response?.data?.detail); }
+});
+
+export const deleteComment = createAsyncThunk('posts/deleteComment', async ({ commentId, reason }: { commentId: number, reason?: string }, { dispatch, rejectWithValue }) => {
+    try {
+        const response = await apiClient.delete(`/posts/comments/${commentId}`, { params: { reason }});
+        // After deleting, we need to refresh the comments of the post the comment belonged to.
+        // This assumes we have access to postId, which we might need to adjust how we call this.
+        // For now, the component will be responsible for refreshing.
+        return { commentId, deletedComment: response.data };
     } catch(e: any) { return rejectWithValue(e.response?.data?.detail); }
 });
 
@@ -104,12 +157,36 @@ const postSlice = createSlice({
   initialState,
   reducers: {},
   extraReducers: (builder) => {
+    const findAndUpdateComment = (comments: Comment[], commentId: number, updateFn: (comment: Comment) => void): Comment[] => {
+        return comments.map(comment => {
+            if (comment.id === commentId) {
+                const newComment = { ...comment };
+                updateFn(newComment);
+                return newComment;
+            }
+            if (comment.replies && comment.replies.length > 0) {
+                return { ...comment, replies: findAndUpdateComment(comment.replies, commentId, updateFn) };
+            }
+            return comment;
+        });
+    };
+
     builder
       .addCase(fetchFeed.fulfilled, (state, action: PayloadAction<Post[]>) => {
         state.feed = action.payload;
       })
       .addCase(fetchPostById.fulfilled, (state, action: PayloadAction<Post>) => {
         state.activePost = action.payload;
+        state.activePostComments = action.payload.comments || [];
+      })
+      .addCase(updatePost.fulfilled, (state, action: PayloadAction<Post>) => {
+        if (state.activePost && state.activePost.id === action.payload.id) {
+            state.activePost = action.payload;
+        }
+        const index = state.feed.findIndex(p => p.id === action.payload.id);
+        if (index !== -1) {
+            state.feed[index] = action.payload;
+        }
       })
       .addCase(fetchComments.fulfilled, (state, action: PayloadAction<Comment[]>) => {
         state.activePostComments = action.payload;
@@ -118,18 +195,37 @@ const postSlice = createSlice({
         const postId = action.payload;
         const post = state.feed.find(p => p.id === postId) || (state.activePost?.id === postId ? state.activePost : null);
         if (post) {
-          post.is_liked_by_user = true;
-          post.statistics.likes_count += 1;
+          post.is_liked = true;
+          post.like_count += 1;
         }
       })
       .addCase(unlikePost.fulfilled, (state, action: PayloadAction<number>) => {
         const postId = action.payload;
         const post = state.feed.find(p => p.id === postId) || (state.activePost?.id === postId ? state.activePost : null);
         if (post) {
-          post.is_liked_by_user = false;
-          post.statistics.likes_count -= 1;
+          post.is_liked = false;
+          post.like_count -= 1;
         }
       })
+      .addCase(likeComment.fulfilled, (state, action: PayloadAction<number>) => {
+          state.activePostComments = findAndUpdateComment(state.activePostComments, action.payload, (comment) => {
+              comment.is_liked = true;
+              comment.like_count += 1;
+          });
+      })
+      .addCase(unlikeComment.fulfilled, (state, action: PayloadAction<number>) => {
+          state.activePostComments = findAndUpdateComment(state.activePostComments, action.payload, (comment) => {
+              comment.is_liked = false;
+              comment.like_count -= 1;
+          });
+      })
+       .addCase(deleteComment.fulfilled, (state, action: PayloadAction<{ commentId: number, deletedComment: Comment }>) => {
+           const { commentId, deletedComment } = action.payload;
+           state.activePostComments = findAndUpdateComment(state.activePostComments, commentId, (comment) => {
+               comment.is_deleted = true;
+               comment.content = deletedComment.content; // API returns "[此評論已被刪除]"
+           });
+       })
       .addMatcher((action) => action.type.startsWith('posts/') && action.type.endsWith('/pending'), (state) => {
         state.status = 'loading';
         state.error = null;
