@@ -27,6 +27,17 @@ const initialState: PostState = {
   error: null,
 };
 
+interface CreatePostPayload {
+  content: string;
+  visibility: 'public' | 'friends' | 'private';
+  tags?: string[];
+  pet_id?: number | null;
+  media_ids?: number[];
+  location?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+}
+
 // --- Thunks ---
 export const fetchFeed = createAsyncThunk('posts/fetchFeed', async (_, { rejectWithValue }) => {
   try {
@@ -44,7 +55,7 @@ export const fetchPostById = createAsyncThunk('posts/fetchPostById', async (post
     } catch (e: any) { return rejectWithValue(e.response?.data?.detail); }
 });
 
-export const createPost = createAsyncThunk('posts/createPost', async (postData: { content: string, visibility: 'public' | 'friends' | 'private', location: string | null, tags: string[], media_ids?: number[], pet_id?: number[], latitude?: number, longitude?: number, comments_enabled: boolean }, { dispatch, rejectWithValue }) => {
+export const createPost = createAsyncThunk('posts/createPost', async (postData: CreatePostPayload, { dispatch, rejectWithValue }) => {
   try {
     const response = await apiClient.post('/posts', postData);
     dispatch(fetchFeed());
@@ -52,6 +63,19 @@ export const createPost = createAsyncThunk('posts/createPost', async (postData: 
   } catch (e: any) {
     return rejectWithValue(e.response?.data?.detail);
   }
+});
+
+export const uploadPostMedia = createAsyncThunk('posts/uploadPostMedia', async (files: File[], { rejectWithValue }) => {
+    try {
+        const formData = new FormData();
+        files.forEach(file => {
+          formData.append('files', file);
+        });
+        const response = await apiClient.post('/media/upload/post', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data.success as Media[];
+    } catch (e: any) { return rejectWithValue(e.response?.data?.detail || "上傳失敗"); }
 });
 
 export const updatePost = createAsyncThunk(
@@ -82,16 +106,16 @@ export const toggleComments = createAsyncThunk(
     }
 );
 
-export const uploadMedia = createAsyncThunk('posts/uploadMedia', async (file: File, { rejectWithValue }) => {
-    try {
-        const formData = new FormData();
-        formData.append('file', file);
-        const response = await apiClient.post('/posts/media/upload', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        return response.data;
-    } catch (e: any) { return rejectWithValue(e.response?.data?.detail || "上傳失敗"); }
-});
+// export const uploadMedia = createAsyncThunk('posts/uploadMedia', async (file: File, { rejectWithValue }) => {
+//     try {
+//         const formData = new FormData();
+//         formData.append('file', file);
+//         const response = await apiClient.post('/posts/media/upload', formData, {
+//             headers: { 'Content-Type': 'multipart/form-data' },
+//         });
+//         return response.data;
+//     } catch (e: any) { return rejectWithValue(e.response?.data?.detail || "上傳失敗"); }
+// });
 
 export const likePost = createAsyncThunk('posts/likePost', async (postId: number, { rejectWithValue }) => {
   try {

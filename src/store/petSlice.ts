@@ -75,11 +75,16 @@ export const restorePet = createAsyncThunk('pets/restorePet', async (petId: numb
   }
 });
 
-export const uploadPetAvatar = createAsyncThunk('pets/uploadPetAvatar', async ({ petId, avatarFile }: { petId: number, avatarFile: File }, { rejectWithValue }) => {
+export const uploadPetAvatar = createAsyncThunk('pets/uploadPetAvatar', async ({ petId, avatarFile }: { petId: number, avatarFile: File }, { dispatch, rejectWithValue }) => {
     try {
         const formData = new FormData();
         formData.append('file', avatarFile);
-        const response = await apiClient.post(`/pets/${petId}/avatar`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        // 更新 API 端點
+        const response = await apiClient.post(`/media/upload/pet/${petId}/avatar`, formData, { 
+            headers: { 'Content-Type': 'multipart/form-data' } 
+        });
+        // 上傳成功後，重新獲取寵物資料以更新頭像 URL
+        dispatch(fetchPetById(petId)); 
         return response.data;
     } catch (error: any) { return rejectWithValue(error.response?.data?.detail); }
 });

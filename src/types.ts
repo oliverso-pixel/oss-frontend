@@ -29,6 +29,7 @@ export interface UserPublicProfile {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  background_image_url: string | null;
   is_verified: boolean;
   created_at: string;
   bio?: string | null;

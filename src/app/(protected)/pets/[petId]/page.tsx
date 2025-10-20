@@ -15,6 +15,7 @@ import { MedicalRecord, PetTransferHistory, VaccinationRecord } from '@/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/components/ui/Toaster';
 
 const TransferForm = ({ onSubmit, onCancel }: { onSubmit: (data: { toUserId: number, reason: string }) => void, onCancel: () => void }) => {
     const [toUserId, setToUserId] = useState('');
@@ -194,12 +195,25 @@ export default function PetDetailPage() {
   const { user: currentUser } = useAppSelector((state) => state.auth);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { addToast } = useToast();
 
   useEffect(() => { if (petId) { dispatch(fetchPetById(petId)); } }, [petId, dispatch]);
 
-  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) { dispatch(uploadPetAvatar({ petId, avatarFile: file })); }
+    if (file) {
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        addToast('檔案格式不支援。請選擇圖片檔。', 'error');
+        return;
+      }
+      const result = await dispatch(uploadPetAvatar({ petId, avatarFile: file }));
+      if (uploadPetAvatar.fulfilled.match(result)) {
+        addToast('寵物頭像更新成功！', 'success');
+      } else {
+        addToast(result.payload as string || '更新頭像失敗', 'error');
+      }
+    }
   };
 
   const getAge = (birthDate: string) => {
@@ -236,7 +250,7 @@ export default function PetDetailPage() {
                 {selectedPet.avatar_url ? <img src={selectedPet.avatar_url} alt={selectedPet.name} className="w-full h-full object-cover rounded-full" /> : <Dog size={64} className="text-muted-foreground"/>}
               </div>
               {isOwner && <Button size="icon" className="absolute bottom-0 right-0 rounded-full" onClick={() => fileInputRef.current?.click()}><Upload size={16}/></Button>}
-              <input type="file" ref={fileInputRef} onChange={handleAvatarUpload} className="hidden" accept="image/*"/>
+              <input type="file" ref={fileInputRef} onChange={handleAvatarUpload} className="hidden" accept="image/jpeg, image/png, image/gif, image/webp"/>
             </div>
             <div className="text-center sm:text-left">
               <h1 className="text-4xl font-bold">{selectedPet.name}</h1>

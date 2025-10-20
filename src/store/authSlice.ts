@@ -90,6 +90,44 @@ export const updateUserProfile = createAsyncThunk(
   }
 );
 
+export const uploadAvatar = createAsyncThunk('auth/uploadAvatar', async (avatarFile: File, { dispatch, rejectWithValue }) => {
+  try {
+    const formData = new FormData();
+    formData.append('file', avatarFile);
+    // 新增 crop_data (可選，此處為範例)
+    const cropData = JSON.stringify({ x: 0, y: 0, width: 200, height: 200 });
+    formData.append('crop_data', cropData);
+
+    // 更新 API 端點
+    const response = await apiClient.post('/media/upload/user/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    dispatch(fetchUser()); // 上傳成功後，刷新用戶資料以獲取新的頭像 URL
+    return response.data;
+  } catch (error: any) { return rejectWithValue(error.response?.data?.detail || '上傳頭像失敗'); }
+});
+
+export const deleteAvatar = createAsyncThunk('auth/deleteAvatar', async (_, { dispatch, rejectWithValue }) => {
+  try {
+    // 更新 API 端點
+    const response = await apiClient.delete('/users/me/avatar');
+      dispatch(fetchUser()); // 刪除成功後，刷新用戶資料
+      return response.data;
+  } catch (error: any) { return rejectWithValue(error.response?.data?.detail || '移除頭像失敗'); }
+});
+
+export const uploadBackgroundImage = createAsyncThunk('auth/uploadBackgroundImage', async (backgroundImageFile: File, { dispatch, rejectWithValue }) => {
+    try {
+        const formData = new FormData();
+        formData.append('file', backgroundImageFile);
+        const response = await apiClient.post('/media/upload/user/background', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        dispatch(fetchUser());
+        return response.data;
+    } catch (error: any) { return rejectWithValue(error.response?.data?.detail || '上傳背景圖失敗'); }
+});
+
 export const changePassword = createAsyncThunk(
   'auth/changePassword',
   async (passwordData: any, { rejectWithValue }) => {

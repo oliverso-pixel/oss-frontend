@@ -21,8 +21,8 @@ export default function Sidebar() {
     { href: "/explore", label: "探索用戶", icon: Compass },
     { href: "/friends", label: "好友列表", icon: Users },
     { href: "/friends/requests", label: "好友請求", icon: UserPlus },
-    { href: "/following", label: "我關注誰", icon: Heart },
-    { href: "/followers", label: "誰關注我", icon: Users },
+    // { href: "/following", label: "我關注誰", icon: Heart },
+    // { href: "/followers", label: "誰關注我", icon: Users },
     { href: "/settings", label: "設定", icon: Settings },
   ];
 
